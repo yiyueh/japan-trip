@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head><title>Icon Generator</title></head>
+<body>
+<canvas id="c192" width="192" height="192"></canvas>
+<canvas id="c512" width="512" height="512"></canvas>
+<script>
+function drawIcon(canvas) {
+  const s = canvas.width;
+  const ctx = canvas.getContext("2d");
+  
+  // Background gradient - deep blue sky
+  const grad = ctx.createLinearGradient(0, 0, 0, s);
+  grad.addColorStop(0,   "#0C1445");
+  grad.addColorStop(0.5, "#1A3B8C");
+  grad.addColorStop(1,   "#2D6BE4");
+  ctx.fillStyle = grad;
+  ctx.roundRect(0, 0, s, s, s * 0.22);
+  ctx.fill();
+  
+  const sc = s / 192;
+  
+  // Mount Fuji (white/light)
+  ctx.fillStyle = "rgba(255,255,255,0.9)";
+  ctx.beginPath();
+  ctx.moveTo(96*sc, 70*sc);
+  ctx.lineTo(40*sc, 140*sc);
+  ctx.lineTo(152*sc, 140*sc);
+  ctx.closePath();
+  ctx.fill();
+  
+  // Snow cap on Fuji
+  ctx.fillStyle = "#fff";
+  ctx.beginPath();
+  ctx.moveTo(96*sc, 70*sc);
+  ctx.lineTo(76*sc, 102*sc);
+  ctx.lineTo(116*sc, 102*sc);
+  ctx.closePath();
+  ctx.fill();
+  
+  // Red sun (circle) top right
+  ctx.fillStyle = "#E53E3E";
+  ctx.beginPath();
+  ctx.arc(148*sc, 54*sc, 20*sc, 0, Math.PI*2);
+  ctx.fill();
+  
+  // Airplane silhouette - flying left to right
+  ctx.save();
+  ctx.translate(60*sc, 52*sc);
+  ctx.rotate(-0.18);
+  ctx.fillStyle = "#fff";
+  // Body
+  ctx.fillRect(0, -5*sc, 48*sc, 10*sc);
+  ctx.beginPath();
+  ctx.moveTo(48*sc, -4*sc);
+  ctx.lineTo(60*sc, 0);
+  ctx.lineTo(48*sc, 4*sc);
+  ctx.closePath();
+  ctx.fill();
+  // Wing
+  ctx.beginPath();
+  ctx.moveTo(14*sc, -5*sc);
+  ctx.lineTo(0, -20*sc);
+  ctx.lineTo(32*sc, -5*sc);
+  ctx.closePath();
+  ctx.fill();
+  // Tail
+  ctx.beginPath();
+  ctx.moveTo(4*sc, -5*sc);
+  ctx.lineTo(0, -14*sc);
+  ctx.lineTo(12*sc, -5*sc);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+  
+  // 日 character at bottom
+  ctx.fillStyle = "rgba(255,255,255,0.95)";
+  ctx.font = `bold ${36*sc}px serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("日本", 96*sc, 165*sc);
+  
+  return canvas.toDataURL("image/png");
+}
+
+const d192 = drawIcon(document.getElementById("c192"));
+const d512 = drawIcon(document.getElementById("c512"));
+console.log("192:", d192.slice(0,50));
+console.log("512:", d512.slice(0,50));
+document.body.innerHTML += `<br><img src="${d192}"><br><a href="${d192}" download="icon-192.png">Download 192</a><br><a href="${d512}" download="icon-512.png">Download 512</a>`;
+</script>
+</body>
+</html>
