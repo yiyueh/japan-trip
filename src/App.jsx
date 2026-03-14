@@ -431,11 +431,20 @@ export default function App() {
       const tripRef = ref(db, `trips/${trip.shareCode}`);
       const unsub = onValue(tripRef, snapshot => {
         const remote = snapshot.val();
-        if (!remote) return;
+        if (!remote || !Array.isArray(remote.days)) return;
         if (remote.updatedAt > (trip.updatedAt || 0)) {
           setTrips(prev => prev.map(p =>
             p.shareCode === trip.shareCode
-              ? { ...remote, id: p.id, joinedByMe: p.joinedByMe }
+              ? {
+                  ...remote,
+                  id: p.id,
+                  joinedByMe: p.joinedByMe,
+                  members: remote.members || [],
+                  fixedCosts: remote.fixedCosts || [],
+                  rates: remote.rates || DEFAULT_RATES,
+                  budget: remote.budget || { total: 0 },
+                  days: (remote.days || []).map(d => ({ ...d, spots: d.spots || [] })),
+                }
               : p
           ));
         }
@@ -473,12 +482,37 @@ export default function App() {
       const snapshot = await get(ref(db, `trips/${code}`));
       if (!snapshot.exists()) { setJoinError("找不到此邀請碼，請確認後重試"); setJoinLoading(false); return; }
       const remote = snapshot.val();
+      if (!remote || !remote.name || !Array.isArray(remote.days)) { setJoinError("行程資料損毀，請請對方重新分享"); setJoinLoading(false); return; }
       const alreadyJoined = trips.some(t => t.shareCode === code);
       if (alreadyJoined) { setJoinError("你已加入此行程"); setJoinLoading(false); return; }
-      setTrips(prev => [...prev, { ...remote, id: Date.now(), joinedByMe: true }]);
+      const safe = {
+        ...remote,
+        id: Date.now(),
+        joinedByMe: true,
+        members: remote.members || [],
+        fixedCosts: remote.fixedCosts || [],
+        rates: remote.rates || DEFAULT_RATES,
+        budget: remote.budget || { total: 0 },
+        days: (remote.days || []).map(d => ({
+          ...d,
+          spots: (d.spots || []).map(sp => ({
+            id: sp.id || Date.now(),
+            time: sp.time || "",
+            name: sp.name || "",
+            cat: sp.cat || "景點",
+            note: sp.note || "",
+            done: sp.done || false,
+            budget: sp.budget || 0,
+            transit: sp.transit || "",
+            payer: sp.payer || "",
+            currency: sp.currency || "JPY",
+          })),
+        })),
+      };
+      setTrips(prev => [...prev, safe]);
       setJoinCode("");
       setModal(null);
-    } catch {
+    } catch (e) {
       setJoinError("連線失敗，請稍後再試");
     }
     setJoinLoading(false);
@@ -493,7 +527,32 @@ export default function App() {
       const snapshot = await get(ref(db, `trips/${trip.shareCode}`));
       if (snapshot.exists()) {
         const remote = snapshot.val();
-        setTrips(prev => prev.map(p => p.id === tripId ? { ...remote, id: tripId, joinedByMe: trip.joinedByMe } : p));
+        if (!remote || !Array.isArray(remote.days)) { setSyncStatus(p => ({ ...p, [tripId]: "error" })); return; }
+        const safe = {
+          ...remote,
+          id: tripId,
+          joinedByMe: trip.joinedByMe,
+          members: remote.members || [],
+          fixedCosts: remote.fixedCosts || [],
+          rates: remote.rates || DEFAULT_RATES,
+          budget: remote.budget || { total: 0 },
+          days: (remote.days || []).map(d => ({
+            ...d,
+            spots: (d.spots || []).map(sp => ({
+              id: sp.id || Date.now(),
+              time: sp.time || "",
+              name: sp.name || "",
+              cat: sp.cat || "景點",
+              note: sp.note || "",
+              done: sp.done || false,
+              budget: sp.budget || 0,
+              transit: sp.transit || "",
+              payer: sp.payer || "",
+              currency: sp.currency || "JPY",
+            })),
+          })),
+        };
+        setTrips(prev => prev.map(p => p.id === tripId ? safe : p));
         setSyncStatus(p => ({ ...p, [tripId]: "ok" }));
       }
     } catch {
