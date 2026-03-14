@@ -1,6 +1,18 @@
-import { db } from "./firebase";
-import { ref, set as dbSet, get, onValue, off } from "firebase/database";
 import { useState, useRef, useEffect, useCallback } from "react";
+import { initializeApp } from "firebase/app";
+import { getDatabase, ref, set as dbSet, get, onValue, off } from "firebase/database";
+
+const firebaseConfig = {
+  apiKey:            "AIzaSyCypSQoMOkQwNf3KO2mfR9pd_Zyz2QQdh4",
+  authDomain:        "japan-trip-c8d83.firebaseapp.com",
+  databaseURL:       "https://japan-trip-c8d83-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:         "japan-trip-c8d83",
+  storageBucket:     "japan-trip-c8d83.firebasestorage.app",
+  messagingSenderId: "443630513127",
+  appId:             "1:443630513127:web:72dfda1cae752f5ce66b42",
+};
+const _fbApp = initializeApp(firebaseConfig);
+const db = getDatabase(_fbApp);
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 const INITIAL_TRIPS = [
@@ -353,7 +365,7 @@ export default function App() {
   const syncTimers = useRef({});
   const listeners  = useRef({});
 
-  // ── Load from localStorage on first mount ──
+  // ── Load from storage on first mount ──
   useEffect(() => {
     try {
       const t  = localStorage.getItem("app:trips");
@@ -402,7 +414,7 @@ export default function App() {
     }
   }, []);
 
-  // ── Auto-push shared trips on change (debounced 1.5s) ──
+  // ── Auto-sync shared trips on change (debounced 1.5s) ──
   useEffect(() => {
     trips.forEach(trip => {
       if (!trip.shareCode) return;
@@ -411,7 +423,7 @@ export default function App() {
     });
   }, [trips, saveShared]);
 
-  // ── Real-time Firebase listeners ──
+  // ── Real-time Firebase listeners for shared trips ──
   useEffect(() => {
     const sharedTrips = trips.filter(t => t.shareCode);
     sharedTrips.forEach(trip => {
@@ -439,10 +451,10 @@ export default function App() {
     });
   }, [trips]);
 
-  // ── Share a trip ──
+  // ── Share a trip: generate code + save ──
   async function shareTrip(tripId) {
     const code = genCode();
-    const now  = Date.now();
+    const now = Date.now();
     setTrips(prev => {
       const updated = prev.map(t => t.id !== tripId ? t : { ...t, shareCode: code, updatedAt: now });
       const trip = updated.find(t => t.id === tripId);
@@ -472,7 +484,7 @@ export default function App() {
     setJoinLoading(false);
   }
 
-  // ── Manual refresh ──
+  // ── Manual refresh for joined trips ──
   async function refreshTrip(tripId) {
     const trip = trips.find(t => t.id === tripId);
     if (!trip?.shareCode) return;
@@ -1784,7 +1796,7 @@ function HomeScreen({ trips, onSelect, onAddTrip, onDelete, onShare, onRefresh, 
     <div style={{ fontFamily: "'Hiragino Sans','Noto Sans TC',sans-serif", minHeight: "100vh", background: "#FAFAF8" }}>
 
       {/* ── Hero cover ── */}
-      <div style={{ position: "relative", height: 200, overflow: "hidden", background: coverPhoto ? "transparent" : theme.bg }}>
+      <div style={{ position: "relative", height: "calc(200px + env(safe-area-inset-top))", overflow: "hidden", background: coverPhoto ? "transparent" : theme.bg }}>
         {coverPhoto
           ? <img src={coverPhoto} alt="cover" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           : <>
@@ -1803,7 +1815,7 @@ function HomeScreen({ trips, onSelect, onAddTrip, onDelete, onShare, onRefresh, 
         </div>
 
         {/* Cover buttons */}
-        <div style={{ position: "absolute", top: 14, right: 14, display: "flex", gap: 8 }}>
+        <div style={{ position: "absolute", top: "calc(14px + env(safe-area-inset-top))", right: 14, display: "flex", gap: 8 }}>
           <input ref={photoInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handlePhotoUpload} />
           <button onClick={() => photoInputRef.current?.click()}
             style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(0,0,0,0.35)", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 20, padding: "5px 11px", color: "#fff", fontSize: 11, fontWeight: 600, cursor: "pointer", backdropFilter: "blur(4px)" }}>
@@ -1934,7 +1946,7 @@ function HomeScreen({ trips, onSelect, onAddTrip, onDelete, onShare, onRefresh, 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const S = {
   app:         { fontFamily: "'Hiragino Sans','Noto Sans TC',sans-serif", background: "#FAFAF8", minHeight: "100vh", maxWidth: 430, margin: "0 auto", WebkitTapHighlightColor: "transparent" },
-  header:      { display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderBottom: "1px solid #F0EDE8", background: "#fff", position: "sticky", top: 0, zIndex: 10 },
+  header:      { display: "flex", alignItems: "center", gap: 10, paddingTop: "calc(10px + env(safe-area-inset-top))", paddingBottom: 10, paddingLeft: 14, paddingRight: 14, borderBottom: "1px solid #F0EDE8", background: "#fff", position: "sticky", top: 0, zIndex: 10 },
   iconBtn:     { background: "none", border: "none", cursor: "pointer", padding: 6, borderRadius: 8, display: "flex", WebkitAppearance: "none" },
   headerTitle: { fontSize: 15, fontWeight: 700, color: "#1A1A1A", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
   headerBadge: { fontSize: 11, color: "#9CA3AF", background: "#F5F5F3", padding: "3px 8px", borderRadius: 20 },
