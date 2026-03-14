@@ -737,7 +737,7 @@ export default function App() {
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={S.headerTitle}>{trip?.name}</div>
           <button style={S.dateBadgeBtn} onClick={() => setEditDates({ startDate: trip.startDate, endDate: trip.endDate })}>
-            {trip?.startDate?.slice(5)} – {trip?.endDate?.slice(5)} ✎
+            <span style={{ fontSize: 13, color: "#6B7280", fontWeight: 500 }}>{trip?.startDate?.slice(5)} – {trip?.endDate?.slice(5)}</span> <span style={{ fontSize: 11, color: "#C4C4C4" }}>✎</span>
           </button>
         </div>
         {trip?.shareCode && (
@@ -777,7 +777,7 @@ export default function App() {
                 </span>
               )}
             </div>
-            {/* Members */}
+            {/* Members + add button */}
             <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
               {members.length === 0 ? (
                 <span style={{ fontSize: 11, color: "#C4C4C4" }}>尚無成員</span>
@@ -793,6 +793,10 @@ export default function App() {
                   +{members.length - 5}
                 </div>
               )}
+              <button onClick={() => setModal("addMember")}
+                style={{ width: 24, height: 24, borderRadius: "50%", background: "#F0F9FF", border: "1.5px dashed #38BDF8", color: "#0284C7", fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginLeft: members.length > 0 ? 2 : 0, flexShrink: 0, WebkitAppearance: "none" }}>
+                +
+              </button>
             </div>
           </div>
         );
@@ -892,6 +896,60 @@ export default function App() {
               }));
               setActiveDay(0);
               setEditDates(null);
+            }}>確認更新</button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Add Member Modal ── */}
+      {modal === "addMember" && (
+        <div style={S.overlay} onClick={() => setModal(null)}>
+          <div style={S.sheet} onClick={e => e.stopPropagation()}>
+            <div style={S.sheetHandle} />
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <span style={S.sheetTitle}>成員管理 👥</span>
+              <button style={S.iconBtn} onClick={() => setModal(null)}><Icon name="close" size={18} color="#9CA3AF" /></button>
+            </div>
+            {/* Existing members */}
+            {(trip?.members || []).length > 0 && (
+              <div style={{ marginBottom: 14 }}>
+                {(trip.members).map((m, i) => (
+                  <div key={m} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid #F5F5F3" }}>
+                    <div style={{ width: 32, height: 32, borderRadius: "50%", background: MEMBER_COLORS[i % MEMBER_COLORS.length], display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, color: "#fff" }}>{m[0]}</div>
+                    <span style={{ flex: 1, fontSize: 14, color: "#1A1A1A" }}>{m}</span>
+                    <button onClick={() => removeMember(m)}
+                      style={{ fontSize: 12, color: "#F87171", background: "none", border: "none", cursor: "pointer", padding: "4px 8px" }}>移除</button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {/* Add new member */}
+            <label style={S.lbl}>新增成員</label>
+            <AddMemberInline onAdd={name => { addMember(name); }} />
+          </div>
+        </div>
+      )}
+
+      {/* ── Edit Budget Modal ── */}
+      {modal === "editBudget" && (
+        <div style={S.overlay} onClick={() => setModal(null)}>
+          <div style={S.sheet} onClick={e => e.stopPropagation()}>
+            <div style={S.sheetHandle} />
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <span style={S.sheetTitle}>調整預算上限 💴</span>
+              <button style={S.iconBtn} onClick={() => setModal(null)}><Icon name="close" size={18} color="#9CA3AF" /></button>
+            </div>
+            <label style={S.lbl}>總預算（日幣 ¥）</label>
+            <input style={{ ...S.inp, fontSize: 20, fontWeight: 700, textAlign: "center" }}
+              type="number"
+              defaultValue={trip?.budget?.total || 0}
+              id="budgetInput"
+            />
+            <button style={{ ...S.confirmBtn, marginTop: 20 }} onClick={() => {
+              const val = Number(document.getElementById("budgetInput").value);
+              if (isNaN(val) || val < 0) return;
+              setTrips(prev => prev.map(t => t.id !== activeTripId ? t : { ...t, updatedAt: Date.now(), budget: { ...t.budget, total: val } }));
+              setModal(null);
             }}>確認更新</button>
           </div>
         </div>
@@ -1050,10 +1108,13 @@ export default function App() {
             </div>
 
             {/* Hero card */}
-            <div style={S.budgetHero}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+            <div style={{ ...S.budgetHero, cursor: "pointer" }} onClick={() => setModal("editBudget")}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4, alignItems: "center" }}>
                 <span style={{ opacity: 0.8, fontSize: 13 }}>預算上限（日幣）</span>
-                <span style={{ fontSize: 21, fontWeight: 800 }}>¥{trip.budget.total.toLocaleString()}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ fontSize: 21, fontWeight: 800 }}>¥{trip.budget.total.toLocaleString()}</span>
+                  <span style={{ fontSize: 11, opacity: 0.7, border: "1px solid rgba(255,255,255,0.5)", borderRadius: 10, padding: "2px 7px" }}>✎ 修改</span>
+                </div>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
                 <span style={{ opacity: 0.8, fontSize: 12 }}>行程花費（已確認）</span>
@@ -1836,6 +1897,23 @@ const COVER_THEMES = [
   { id: "lavender",label: "薰衣草", bg: "linear-gradient(160deg,#4C1D95 0%,#7C3AED 60%,#C4B5FD 100%)" },
   { id: "ocean",   label: "海洋",   bg: "linear-gradient(160deg,#0C4A6E 0%,#0284C7 60%,#7DD3FC 100%)" },
 ];
+
+function AddMemberInline({ onAdd }) {
+  const [val, setVal] = useState("");
+  return (
+    <div style={{ display: "flex", gap: 8 }}>
+      <input style={{ flex: 1, padding: "10px 12px", border: "1px solid #E5E7EB", borderRadius: 10, fontSize: 16, outline: "none", boxSizing: "border-box" }}
+        placeholder="輸入姓名" value={val}
+        onChange={e => setVal(e.target.value)}
+        onKeyDown={e => { if (e.key === "Enter" && val.trim()) { onAdd(val.trim()); setVal(""); } }}
+      />
+      <button onClick={() => { if (val.trim()) { onAdd(val.trim()); setVal(""); } }}
+        style={{ padding: "10px 18px", background: "#2D6BE4", color: "#fff", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
+        加入
+      </button>
+    </div>
+  );
+}
 
 function HomeScreen({ trips, onSelect, onAddTrip, onDelete, onShare, onRefresh, onJoin, syncStatus = {}, coverTheme, onChangeCover, coverPhoto, onChangeCoverPhoto }) {
   const [confirmDelete, setConfirmDelete] = useState(null);
