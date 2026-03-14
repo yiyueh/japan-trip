@@ -604,12 +604,18 @@ export default function App() {
   }
 
   function handleAddSpot(form) {
-    patchSpots(activeDay, spots => [...spots, { ...form, id: Date.now(), done: false }]);
+    patchSpots(activeDay, spots => {
+      const updated = [...spots, { ...form, id: Date.now(), done: false }];
+      return updated.sort((a, b) => (a.time || "").localeCompare(b.time || ""));
+    });
     setModal(null);
   }
 
   function handleEditSpot(form) {
-    patchSpots(activeDay, spots => spots.map(sp => sp.id === editSpot.id ? { ...sp, ...form } : sp));
+    patchSpots(activeDay, spots => {
+      const updated = spots.map(sp => sp.id === editSpot.id ? { ...sp, ...form } : sp);
+      return updated.sort((a, b) => (a.time || "").localeCompare(b.time || ""));
+    });
     setModal(null);
     setEditSpot(null);
   }
@@ -997,25 +1003,6 @@ export default function App() {
 
                   {/* ── Spot card ── */}
                   <div style={{ ...S.card, opacity: sp.done ? 0.48 : 1 }}>
-                    {/* up/down move buttons */}
-                    <div style={{ display: "flex", flexDirection: "column", gap: 2, flexShrink: 0 }}>
-                      <button
-                        disabled={si === 0}
-                        onClick={() => patchSpots(activeDay, spots => {
-                          const a = [...spots]; [a[si-1], a[si]] = [a[si], a[si-1]]; return a;
-                        })}
-                        style={{ width: 26, height: 26, borderRadius: 7, border: "1px solid #E5E7EB", background: si === 0 ? "#F9FAFB" : "#fff", cursor: si === 0 ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: si === 0 ? "#D1D5DB" : "#6B7280", WebkitAppearance: "none" }}>
-                        ▲
-                      </button>
-                      <button
-                        disabled={si === dayData.spots.length - 1}
-                        onClick={() => patchSpots(activeDay, spots => {
-                          const a = [...spots]; [a[si], a[si+1]] = [a[si+1], a[si]]; return a;
-                        })}
-                        style={{ width: 26, height: 26, borderRadius: 7, border: "1px solid #E5E7EB", background: si === dayData.spots.length - 1 ? "#F9FAFB" : "#fff", cursor: si === dayData.spots.length - 1 ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: si === dayData.spots.length - 1 ? "#D1D5DB" : "#6B7280", WebkitAppearance: "none" }}>
-                        ▼
-                      </button>
-                    </div>
 
                     {/* time */}
                     <div style={S.timeCol}>
