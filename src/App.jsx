@@ -518,11 +518,19 @@ export default function App() {
     setJoinLoading(false);
   }
 
-  // ── Manual refresh for joined trips ──
+  // ── Manual refresh / retry ──
   async function refreshTrip(tripId) {
     const trip = trips.find(t => t.id === tripId);
     if (!trip?.shareCode) return;
     setSyncStatus(p => ({ ...p, [tripId]: "syncing" }));
+
+    // Owner → re-upload local data to Firebase
+    if (!trip.joinedByMe) {
+      await saveShared(trip);
+      return;
+    }
+
+    // Joiner → pull latest from Firebase
     try {
       const snapshot = await get(ref(db, `trips/${trip.shareCode}`));
       if (snapshot.exists()) {
@@ -988,16 +996,26 @@ export default function App() {
                   )}
 
                   {/* ── Spot card ── */}
-                  <div
-                    style={{ ...S.card, opacity: sp.done ? 0.48 : 1 }}
-                    draggable
-                    onDragStart={e => onDragStart(e, si)}
-                    onDragEnd={onDragEnd}
-                    onDragOver={e => onDragOver(e, si)}
-                    onDrop={onDrop}
-                  >
-                    {/* drag grip */}
-                    <div style={S.grip}><DragIcon /></div>
+                  <div style={{ ...S.card, opacity: sp.done ? 0.48 : 1 }}>
+                    {/* up/down move buttons */}
+                    <div style={{ display: "flex", flexDirection: "column", gap: 2, flexShrink: 0 }}>
+                      <button
+                        disabled={si === 0}
+                        onClick={() => patchSpots(activeDay, spots => {
+                          const a = [...spots]; [a[si-1], a[si]] = [a[si], a[si-1]]; return a;
+                        })}
+                        style={{ width: 26, height: 26, borderRadius: 7, border: "1px solid #E5E7EB", background: si === 0 ? "#F9FAFB" : "#fff", cursor: si === 0 ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: si === 0 ? "#D1D5DB" : "#6B7280", WebkitAppearance: "none" }}>
+                        ▲
+                      </button>
+                      <button
+                        disabled={si === dayData.spots.length - 1}
+                        onClick={() => patchSpots(activeDay, spots => {
+                          const a = [...spots]; [a[si], a[si+1]] = [a[si+1], a[si]]; return a;
+                        })}
+                        style={{ width: 26, height: 26, borderRadius: 7, border: "1px solid #E5E7EB", background: si === dayData.spots.length - 1 ? "#F9FAFB" : "#fff", cursor: si === dayData.spots.length - 1 ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: si === dayData.spots.length - 1 ? "#D1D5DB" : "#6B7280", WebkitAppearance: "none" }}>
+                        ▼
+                      </button>
+                    </div>
 
                     {/* time */}
                     <div style={S.timeCol}>
@@ -2009,7 +2027,11 @@ function HomeScreen({ trips, onSelect, onAddTrip, onDelete, onShare, onRefresh, 
                   {t.shareCode ? (
                     <button onClick={() => onRefresh(t.id)}
                       style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, padding: "8px", background: "none", border: "none", cursor: "pointer", fontSize: 12, color: syncing === "syncing" ? "#F59E0B" : syncing === "error" ? "#EF4444" : "#10B981", fontWeight: 600 }}>
-                      {syncing === "syncing" ? "⟳ 同步中..." : syncing === "error" ? "✕ 失敗，點擊重試" : "✓ 點擊同步最新"}
+                      {syncing === "syncing"
+                        ? "⟳ 同步中..."
+                        : syncing === "error"
+                        ? "✕ 失敗，點擊重試"
+                        : t.joinedByMe ? "✓ 點擊同步最新" : "✓ 已上傳"}
                     </button>
                   ) : (
                     <button onClick={() => onShare(t.id)}
